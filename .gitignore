@@ -67,3 +67,29 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# C++ build artifacts
+sequential/build/
+*.o
+*.a
+*.out
+*.exe
+
+# Godot
+godot_project/.godot/
+godot_project/*.import
+godot_project/export_presets.cfg
+
+# LaTeX
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.synctex.gz
+report/*.fdb_latexmk
+report/*.fls
+report/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
