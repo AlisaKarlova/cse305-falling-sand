@@ -106,11 +106,11 @@ void seed_initial(sand::Grid& g) {
 
     // Wood platform with a gap in the middle so sand can pass through.
     const int floor_row = 3 * g.height() / 4;
-    const int gap_l     = g.width() * 2 / 5;
-    const int gap_r     = g.width() * 3 / 5;
-    //const int gap_half  = small_dim / 32;   // ~6 cells; blob diameter is small_dim/8 (~25)
-    //const int gap_l     = g.width() / 2 - gap_half;
-    //const int gap_r     = g.width() / 2 + gap_half;
+    //const int gap_l     = g.width() * 2 / 5;
+    //const int gap_r     = g.width() * 3 / 5;
+    const int gap_half  = small_dim / 32;   // ~6 cells; blob diameter is small_dim/8 (~25)
+    const int gap_l     = g.width() / 2 - gap_half;
+    const int gap_r     = g.width() / 2 + gap_half;
     for (int c = g.width() / 8; c < 7 * g.width() / 8; ++c) {
         if (c >= gap_l && c < gap_r) continue;
         g.set(floor_row, c, sand::CellType::Wood);
