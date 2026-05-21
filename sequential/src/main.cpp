@@ -13,6 +13,10 @@
 // C++ baseline. The Godot project handles real rendering for the GPU
 // version.
 // =====================================================================
+#ifdef ENABLE_VIEWER
+#include "viewer.h"
+#endif
+
 #include "grid.h"
 #include "simulation.h"
 
@@ -32,6 +36,7 @@ struct Args {
     int           height           = 200;
     int           steps            = 1000;
     bool          benchmark        = false;
+    bool          viewer           = false;
     int           render_interval  = 1;   // frames between renders
     int           delay_ms         = 16;  // ~60 fps in interactive mode
     std::uint64_t seed             = 0xC5E305ULL;
@@ -45,6 +50,7 @@ void print_usage(const char* prog) {
         "  --height N        grid height (default 200)\n"
         "  --steps  N        number of simulation steps (default 1000)\n"
         "  --benchmark       no rendering, just time the steps\n"
+        "  --viewer          interactive SDL2 window (requires ENABLE_VIEWER build)\n"
         "  --warmup N        warmup steps before benchmark timing (default 5)\n"
         "  --seed   N        RNG seed (default 0xC5E305)\n"
         "  --delay  MS       per-frame sleep in interactive mode (default 16)\n"
@@ -66,6 +72,7 @@ bool parse_args(int argc, char** argv, Args& out) {
         std::string a = argv[i];
         if (a == "-h" || a == "--help") { print_usage(argv[0]); return false; }
         else if (a == "--benchmark") { out.benchmark = true; }
+        else if (a == "--viewer")    { out.viewer    = true; }
         else if (a == "--width")  { auto v = need_value(i, "--width");  if (!v) return false; out.width  = std::atoi(v); }
         else if (a == "--height") { auto v = need_value(i, "--height"); if (!v) return false; out.height = std::atoi(v); }
         else if (a == "--steps")  { auto v = need_value(i, "--steps");  if (!v) return false; out.steps  = std::atoi(v); }
@@ -220,5 +227,20 @@ int run_interactive(const Args& a) {
 int main(int argc, char** argv) {
     Args a;
     if (!parse_args(argc, argv, a)) return 1;
+
+    if (a.viewer) {
+#ifdef ENABLE_VIEWER
+        sand::ViewerArgs va;
+        va.width  = a.width;
+        va.height = a.height;
+        va.seed   = a.seed;
+        return sand::run_viewer(va);
+#else
+        std::fprintf(stderr,
+            "error: --viewer requires building with -DENABLE_VIEWER=ON\n");
+        return 1;
+#endif
+    }
+
     return a.benchmark ? run_benchmark(a) : run_interactive(a);
 }

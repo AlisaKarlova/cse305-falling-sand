@@ -1,25 +1,40 @@
 cmake_minimum_required(VERSION 3.16)
 project(sand_sim LANGUAGES CXX)
 
-# C++17 — enough for everything we use, available on Salle info g++.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Default to Release. Benchmarks must NOT be run on a Debug build —
-# we'd be measuring -O0 noise. If a developer wants Debug, they pass
-# -DCMAKE_BUILD_TYPE=Debug explicitly.
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# Warnings on, but no -Werror (we don't want a stray warning on a
-# different g++ version on Salle info to break the build for the TAs).
-add_compile_options(-Wall -Wextra -Wpedantic)
 
-add_executable(sand_sim
+add_compile_options(-Wall -Wextra -Wpedantic)
+option(ENABLE_VIEWER "Build the interactive SDL2 viewer (requires SDL2)" OFF)
+
+set(SAND_SIM_SOURCES
     src/main.cpp
     src/grid.cpp
     src/simulation.cpp
 )
+
+if(ENABLE_VIEWER)
+    list(APPEND SAND_SIM_SOURCES src/viewer.cpp)
+endif()
+
+add_executable(sand_sim ${SAND_SIM_SOURCES})
 target_include_directories(sand_sim PRIVATE include)
+
+if(ENABLE_VIEWER)
+    find_package(SDL2 REQUIRED)
+    target_compile_definitions(sand_sim PRIVATE ENABLE_VIEWER=1)
+    if(TARGET SDL2::SDL2)
+        target_link_libraries(sand_sim PRIVATE SDL2::SDL2)
+    else()
+        # Fallback for older SDL2 CMake configs that don't export a target.
+        target_include_directories(sand_sim PRIVATE ${SDL2_INCLUDE_DIRS})
+        target_link_libraries(sand_sim PRIVATE ${SDL2_LIBRARIES})
+    endif()
+endif()
