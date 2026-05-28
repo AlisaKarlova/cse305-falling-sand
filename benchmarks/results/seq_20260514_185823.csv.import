@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dh7lhr0qfgy2y"
+
+[deps]
+
+files=["res://benchmarks/results/seq_20260514_185823.height.translation", "res://benchmarks/results/seq_20260514_185823.steps.translation", "res://benchmarks/results/seq_20260514_185823.warmup.translation", "res://benchmarks/results/seq_20260514_185823.rep.translation", "res://benchmarks/results/seq_20260514_185823.elapsed.translation", "res://benchmarks/results/seq_20260514_185823.cell.translation", "res://benchmarks/results/seq_20260514_185823.sand.translation", "res://benchmarks/results/seq_20260514_185823.sand.translation", "res://benchmarks/results/seq_20260514_185823.wood.translation", "res://benchmarks/results/seq_20260514_185823.wood.translation"]
+
+source_file="res://benchmarks/results/seq_20260514_185823.csv"
+dest_files=["res://benchmarks/results/seq_20260514_185823.height.translation", "res://benchmarks/results/seq_20260514_185823.steps.translation", "res://benchmarks/results/seq_20260514_185823.warmup.translation", "res://benchmarks/results/seq_20260514_185823.rep.translation", "res://benchmarks/results/seq_20260514_185823.elapsed.translation", "res://benchmarks/results/seq_20260514_185823.cell.translation", "res://benchmarks/results/seq_20260514_185823.sand.translation", "res://benchmarks/results/seq_20260514_185823.sand.translation", "res://benchmarks/results/seq_20260514_185823.wood.translation", "res://benchmarks/results/seq_20260514_185823.wood.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
