@@ -1,3 +1,5 @@
+
+
 //comments and formatting in this file is done with Claude to keep the code readable and clean
 // main.cpp — Driver. CLI parsing, scene seeding, two run modes:
 //
@@ -13,6 +15,7 @@
 // C++ baseline. The Godot project handles real rendering for the GPU
 // version.
 // =====================================================================
+
 #ifdef ENABLE_VIEWER
 #include "viewer.h"
 #endif
@@ -42,6 +45,24 @@ struct Args {
     std::uint64_t seed             = 0xC5E305ULL;
     int           warmup_steps     = 5;  
 };
+
+// Benchmark scene: the same three sand blobs as seed_initial() but with NO
+// wood. The GPU (Margolus) implementation only models sand/empty, so dropping
+// wood here lets both benchmarks seed a byte-identical initial state and be
+// compared fairly. Blob positions/radii are kept identical to seed_initial so
+// the timed workload matches the interactive demo's sand layout.
+void seed_benchmark(sand::Grid& g) {
+    const int small_dim = std::min(g.width(), g.height());
+    g.seed_blob(g.height() / 6,        g.width() / 2,     small_dim / 16,
+                sand::CellType::Sand);
+    g.seed_blob(g.height() / 4,        g.width() / 3,     small_dim / 24,
+                sand::CellType::Sand);
+    g.seed_blob(g.height() / 4,        2 * g.width() / 3, small_dim / 24,
+                sand::CellType::Sand);
+}
+
+// terminal renderer, done with Claude code to easier check the simulations visually
+
 
 void print_usage(const char* prog) {
     std::fprintf(stderr,
@@ -147,7 +168,7 @@ void render_terminal(const sand::Grid& g) {
 
 int run_benchmark(const Args& a) {
     sand::Grid       g(a.width, a.height);
-    seed_initial(g);
+    seed_benchmark(g);   // sand-only scene, identical to the GPU benchmark
     sand::Simulation sim(a.seed);
 
     const std::size_t initial_sand = g.count(sand::CellType::Sand);
