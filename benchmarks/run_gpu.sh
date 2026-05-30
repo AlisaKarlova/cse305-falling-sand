@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run_gpu.sh — GPU (Godot/Margolus) benchmark sweep.
-# The GPU counterpart to run_seq.sh: runs the headless benchmark.gd across
+# The GPU counterpart to run_seq.sh: runs the benchmark.gd across
 # several grid sizes, repeats each config REPS times, and writes one CSV row
 # per repetition to a timestamped file under benchmarks/results/.
 #

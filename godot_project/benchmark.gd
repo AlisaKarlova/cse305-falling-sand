@@ -1,4 +1,4 @@
-# Headless GPU benchmark for the Margolus sand shader.
+# GPU benchmark for the Margolus sand shader.
 #
 # Mirrors the sequential C++ benchmark so the two
 # implementations are timed in the SAME manner:
@@ -8,9 +8,9 @@
 #   * conservation check on the sand count,
 #   * prints one grep-able "BENCH key=value ..." line.
 #
-# Runs without a window via Godot's headless mode and a local RenderingDevice
+# Runs without a window via local RenderingDevice
 # so we can submit/sync explicitly and time GPU work end-to-end:
-# godot --headless --path godot_project --script res://benchmark.gd --width 128 --height 128 --steps 500 --warmup 5
+# godot --path godot_project --script res://benchmark.gd --width 128 --height 128 --steps 500 --warmup 5
 # Args after the "--" are parsed below; defaults match the C++ Args struct.
 extends SceneTree
 
