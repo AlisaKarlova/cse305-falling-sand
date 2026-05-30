@@ -1,3 +1,5 @@
+# Drives the GPU compute sand simulation using Godot's RenderingDevice API.
+# Grid state lives in a single RGBA32F texture: r=1.0 is sand, r=0.0 is empty.
 extends TextureRect
 
 var rd: RenderingDevice
@@ -14,7 +16,7 @@ var simulation_running: bool = false
 var frame_counter: int = 0
 const FRAMES_PER_UPDATE: int = 1   # lower = faster sim. Raise to watch closely.
 
-# Margolus partition shifts.
+# Cycling through all four offsets covers every 2×2 block without overlap (Margolus partitioning).
 var phase_offsets := [Vector2i(0,0), Vector2i(1,1), Vector2i(0,1), Vector2i(1,0)]
 var frame_index: int = 0
 
@@ -35,7 +37,7 @@ func _ready():
 
 	expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var tex_rd = Texture2DRD.new()
 	tex_rd.texture_rd_rid = grid_texture
 	texture = tex_rd
@@ -46,7 +48,7 @@ func create_texture() -> RID:
 	var fmt = RDTextureFormat.new()
 	fmt.width = WIDTH
 	fmt.height = HEIGHT
-	fmt.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT
+	fmt.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT # float texture; only r channel used
 	fmt.usage_bits = RenderingDevice.TEXTURE_USAGE_STORAGE_BIT | \
 		RenderingDevice.TEXTURE_USAGE_CAN_UPDATE_BIT | \
 		RenderingDevice.TEXTURE_USAGE_SAMPLING_BIT | \
@@ -65,7 +67,7 @@ func initialize_sand_blob(tex: RID) -> void:
 		for x in range(WIDTH):
 			var dx = x - cx
 			var dy = y - cy
-			if dx * dx + dy * dy <= r * r:
+			if dx * dx + dy * dy <= r * r:  # inside circle of radius r
 				var idx = (y * WIDTH + x) * 4
 				data[idx] = 1.0
 				data[idx + 1] = 1.0
@@ -101,12 +103,13 @@ func create_compute_pipeline() -> bool:
 func create_uniform_set(tex: RID) -> RID:
 	var u = RDUniform.new()
 	u.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
-	u.binding = 0
+	u.binding = 0 # matches layout(binding = 0) in the shader
 	u.add_id(tex)
 	return rd.uniform_set_create([u], shader, 0)
 
 func step_once() -> void:
 	var off: Vector2i = phase_offsets[frame_index]
+	# Push current phase offset and grid size to the shader.
 	var pc = PackedInt32Array([off.x, off.y, WIDTH, HEIGHT])
 	var pc_bytes = pc.to_byte_array()
 
@@ -114,7 +117,8 @@ func step_once() -> void:
 	rd.compute_list_bind_compute_pipeline(cl, pipeline)
 	rd.compute_list_bind_uniform_set(cl, uniform_set, 0)
 	rd.compute_list_set_push_constant(cl, pc_bytes, pc_bytes.size())
-
+	# Each shader invocation handles a 2×2 block, so dispatch half the grid in each dimension.
+	# Workgroup size is 16×16, so round up to the nearest multiple of 16.
 	var blocks_x = WIDTH / 2
 	var blocks_y = HEIGHT / 2
 	var groups_x = (blocks_x + 15) / 16
