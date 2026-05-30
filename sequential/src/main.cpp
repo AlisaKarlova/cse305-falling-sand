@@ -23,6 +23,7 @@
 #include "grid.h"
 #include "simulation.h"
 
+#include <iostream>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
