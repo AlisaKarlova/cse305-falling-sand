@@ -17,7 +17,7 @@ var frame_counter: int = 0
 const FRAMES_PER_UPDATE: int = 1   # lower = faster sim. Raise to watch closely.
 
 # Cycling through all four offsets covers every 2×2 block without overlap (Margolus partitioning).
-var phase_offsets := [Vector2i(0,0), Vector2i(1,1), Vector2i(0,1), Vector2i(1,0)]
+var phase_offsets := [Vector2i(0,0), Vector2i(-1,-1), Vector2i(0,-1), Vector2i(-1,0)]
 var frame_index: int = 0
 
 func _ready():
@@ -60,9 +60,9 @@ func initialize_sand_blob(tex: RID) -> void:
 	data.resize(WIDTH * HEIGHT * 4)
 	for i in range(data.size()):
 		data[i] = 0.0
-	var cx = WIDTH / 2
-	var cy = HEIGHT / 4 # upper area so it has room to fall
-	var r = 20
+	var cx = 7 * WIDTH / 8
+	var cy = HEIGHT / 6 # upper area so it has room to fall
+	var r = 50
 	for y in range(HEIGHT):
 		for x in range(WIDTH):
 			var dx = x - cx

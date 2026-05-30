@@ -41,7 +41,7 @@ field() { echo "$1" | tr ' ' '\n' | awk -F= -v k="$2" '$1==k{print $2}'; }
 for SIZE in $SIZES; do
     for REP in $(seq 1 "$REPS"); do
         # Godot prints startup noise; keep only the single BENCH line.
-        LINE=$("$GODOT" --path "$PROJECT" --script res://benchmark.gd -- \
+        LINE=$("$GODOT" --rendering-driver metal --path "$PROJECT" --script res://benchmark.gd -- \
                         --width "$SIZE" --height "$SIZE" \
                         --steps "$STEPS" --warmup "$WARMUP" --chunk "$CHUNK" 2>&1 \
                | grep '^BENCH' || true)
