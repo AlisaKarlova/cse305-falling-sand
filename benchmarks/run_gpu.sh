@@ -69,7 +69,8 @@ for SIZE in $SIZES; do
             exit 2
         fi
 
-        echo "$W,$H,$S,$WM,$REP,$E,$C,$SI,$SF,$WI,$WF" >> "$OUT"
+        C_SCI=$(printf "%.3e" "$C")
+        echo "$W,$H,$S,$WM,$REP,$E,$C_SCI,$SI,$SF,$WI,$WF" >> "$OUT"
         printf "  %5dx%-5d rep=%d  %.4fs  (%.2e cups)\n" "$SIZE" "$SIZE" "$REP" "$E" "$C"
     done
 done

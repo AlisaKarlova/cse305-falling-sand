@@ -88,8 +88,8 @@ func _initialize() -> void:
 	var final_sand := count_sand(rd, grid_texture)
 
 	# Same one-line, key=value format the C++ benchmark prints so run_gpu.sh can parse it.
-	print("BENCH width=%d height=%d steps=%d warmup=%d elapsed_s=%.6f cell_updates_per_s=%f sand_initial=%d sand_final=%d wood_initial=0 wood_final=0" % [
-		width, height, steps, warmup, elapsed_s, cups, initial_sand, final_sand
+	print("BENCH width=%d height=%d steps=%d warmup=%d elapsed_s=%.6f cell_updates_per_s=%s sand_initial=%d sand_final=%d wood_initial=0 wood_final=0" % [
+		width, height, steps, warmup, elapsed_s, String.num_scientific(cups), initial_sand, final_sand
 	])
 	rd.free_rid(uniform_set)
 	rd.free_rid(grid_texture)
@@ -239,3 +239,6 @@ func count_sand(rd: RenderingDevice, tex: RID) -> int:
 		if floats[p * 4] > 0.5:
 			sand += 1
 	return sand
+
+
+
