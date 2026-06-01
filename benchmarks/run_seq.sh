@@ -5,7 +5,7 @@
 # file under benchmarks/results/.
 #
 # Override defaults via env vars:
-#   REPS=10 SIZES="128 256 512 1024" STEPS=200 ./benchmarks/run_seq.sh
+#   REPS=10 SIZES="128 256 512 1024" STEPS=200 LABEL=baseline ./benchmarks/run_seq.sh
 
 set -euo pipefail
 
@@ -13,6 +13,8 @@ REPS=${REPS:-5}
 STEPS=${STEPS:-500}
 WARMUP=${WARMUP:-5}
 SIZES=${SIZES:-"64 128 256 512 1024"}
+# Optional label for the output file; if set, produces seq_LABEL.csv (no timestamp).
+LABEL=${LABEL:-}
 
 # Resolve paths from the script's location so it works no matter where
 # you invoke it from (CI, IDE, repo root, etc).
@@ -29,7 +31,11 @@ if [[ ! -x "$BIN" ]]; then
 fi
 
 mkdir -p "$SCRIPT_DIR/results"
-OUT="$SCRIPT_DIR/results/seq_$(date +%Y%m%d_%H%M%S).csv"
+if [[ -n "$LABEL" ]]; then
+    OUT="$SCRIPT_DIR/results/seq_${LABEL}.csv"
+else
+    OUT="$SCRIPT_DIR/results/seq_$(date +%Y%m%d_%H%M%S).csv"
+fi
 echo "writing results to: $OUT"
 
 echo "width,height,steps,warmup,rep,elapsed_s,cell_updates_per_s,sand_initial,sand_final,wood_initial,wood_final" > "$OUT"

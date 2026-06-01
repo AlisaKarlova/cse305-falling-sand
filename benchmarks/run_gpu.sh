@@ -5,7 +5,7 @@
 # per repetition to a timestamped file under benchmarks/results/.
 #
 # Override defaults via env vars:
-#   GODOT=/path/to/godot REPS=10 SIZES="128 256 512 1024" STEPS=200 ./benchmarks/run_gpu.sh
+#   GODOT=/path/to/godot REPS=10 SIZES="128 256 512 1024" STEPS=200 LABEL=rtx4090 ./benchmarks/run_gpu.sh
 
 set -euo pipefail
 
@@ -17,6 +17,8 @@ SIZES=${SIZES:-"64 128 256 512 1024"}
 # submit/sync every CHUNK steps; 0 = one submission for the whole batch.
 # Raise this (e.g. 100) if a large config triggers a GPU driver timeout (TDR).
 CHUNK=${CHUNK:-0}
+# Optional label for the output file; if set, produces gpu_LABEL.csv (no timestamp).
+LABEL=${LABEL:-}
 
 # Resolve paths from the script's location so it works no matter where it's
 # invoked from (CI, IDE, repo root, etc).
@@ -31,7 +33,11 @@ if ! command -v "$GODOT" >/dev/null 2>&1; then
 fi
 
 mkdir -p "$SCRIPT_DIR/results"
-OUT="$SCRIPT_DIR/results/gpu_$(date +%Y%m%d_%H%M%S).csv"
+if [[ -n "$LABEL" ]]; then
+    OUT="$SCRIPT_DIR/results/gpu_${LABEL}.csv"
+else
+    OUT="$SCRIPT_DIR/results/gpu_$(date +%Y%m%d_%H%M%S).csv"
+fi
 echo "writing results to: $OUT"
 
 echo "width,height,steps,warmup,rep,elapsed_s,cell_updates_per_s,sand_initial,sand_final,wood_initial,wood_final" > "$OUT"
