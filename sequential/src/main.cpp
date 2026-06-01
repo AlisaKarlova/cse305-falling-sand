@@ -45,6 +45,8 @@ struct Args {
     int           delay_ms         = 16;  // ~60 fps in interactive mode
     std::uint64_t seed             = 0xC5E305ULL;
     int           warmup_steps     = 5;  
+    double        fill             = 0.0;   // 0 = blob scene; >0 = random fill at this density
+
 };
 
 // Benchmark scene: the same three sand blobs as seed_initial() but with NO
@@ -62,6 +64,26 @@ void seed_benchmark(sand::Grid& g) {
                 sand::CellType::Sand);
 }
 
+// Random Bernoulli fill at target density. Each cell is set to Sand with
+// probability `fraction` independently. Uses std::mt19937_64 (period 2^19937-1,
+// passes all standard statistical tests) — no hand-rolled RNG, no bit-truncation
+// pitfalls. Reproducible given the same seed.
+void seed_random(sand::Grid& g, double fraction, std::uint64_t seed) {
+
+    const double f = std::max(0.0, std::min(fraction, 1.0)); // same as:    const double f = std::clamp(fraction, 0.0, 1.0);
+    if (f <= 0.0) return;
+
+    std::mt19937_64 rng(seed);
+    std::bernoulli_distribution coin(f);
+
+    for (int r = 0; r < g.height(); ++r) {
+        for (int c = 0; c < g.width(); ++c) {
+            if (coin(rng)) {
+                g.set(r, c, sand::CellType::Sand);
+            }
+        }
+    }
+}
 // terminal renderer, done with Claude code to easier check the simulations visually
 
 
@@ -76,6 +98,7 @@ void print_usage(const char* prog) {
         "  --warmup N        warmup steps before benchmark timing (default 5)\n"
         "  --seed   N        RNG seed (default 0xC5E305)\n"
         "  --delay  MS       per-frame sleep in interactive mode (default 16)\n"
+        "  --fill   F        random Bernoulli fill at density F in [0,1]; overrides blob scene\n"
         "  -h, --help        show this message\n",
         prog);
 }
@@ -101,6 +124,7 @@ bool parse_args(int argc, char** argv, Args& out) {
         else if (a == "--warmup") { auto v = need_value(i, "--warmup"); if (!v) return false; out.warmup_steps = std::atoi(v); }
         else if (a == "--seed")   { auto v = need_value(i, "--seed");   if (!v) return false; out.seed   = std::strtoull(v, nullptr, 0); }
         else if (a == "--delay")  { auto v = need_value(i, "--delay");  if (!v) return false; out.delay_ms = std::atoi(v); }
+        else if (a == "--fill")   { auto v = need_value(i, "--fill");   if (!v) return false; out.fill = std::atof(v); }
         else {
             std::fprintf(stderr, "unknown argument: %s\n", a.c_str());
             print_usage(argv[0]);
@@ -169,8 +193,12 @@ void render_terminal(const sand::Grid& g) {
 
 int run_benchmark(const Args& a) {
     sand::Grid       g(a.width, a.height);
-    seed_benchmark(g);   // sand-only scene, identical to the GPU benchmark
-    sand::Simulation sim(a.seed);
+    if (a.fill > 0.0) {
+        seed_random(g, a.fill, a.seed);
+    } else {
+        seed_benchmark(g);
+    }
+    sand::Simulation sim(a.seed);   
 
     const std::size_t initial_sand = g.count(sand::CellType::Sand);
     const std::size_t initial_wood = g.count(sand::CellType::Wood);

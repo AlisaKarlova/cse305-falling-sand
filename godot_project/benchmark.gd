@@ -26,6 +26,7 @@ var steps: int = 1000
 var warmup: int = 5
 var rng_seed: int = 0xC5E305 # accepted for parity, the GPU rule is deterministic
 var chunk: int = 0 # 0 = one submit for the whole batch; >0 = submit/sync every `chunk` steps
+var fill: float = 0.0 #0 = blob scene; >0 = random Bernoulli fill at this density
 
 func _initialize() -> void:
 	if not parse_args(OS.get_cmdline_user_args()):
@@ -121,6 +122,8 @@ func parse_args(args: PackedStringArray) -> bool:
 			rng_seed = _need_int(args, i)
 		elif a == "--chunk":
 			chunk = _need_int(args, i)
+		elif a == "--fill":
+			fill = _need_float(args, i)
 		else:
 			printerr("unknown argument: ", a)
 			return false
@@ -138,6 +141,12 @@ func _need_int(args: PackedStringArray, i: int) -> int:
 		printerr("missing value for ", args[i])
 		return 0
 	return args[i + 1].to_int()
+
+func _need_float(args: PackedStringArray, i: int) -> float:
+	if i + 1 >= args.size():
+		printerr("missing value for ", args[i])
+		return 0.0
+	return args[i + 1].to_float()
 
 
 func compile_shader(rd: RenderingDevice) -> RID:
@@ -174,10 +183,13 @@ func create_texture(rd: RenderingDevice) -> RID:
 func seed_scene(rd: RenderingDevice, tex: RID) -> int:
 	var data := PackedFloat32Array()
 	data.resize(width * height * 4)
-	var small_dim := mini(width, height)
-	stamp_blob(data, height / 6, width / 2, small_dim / 16)
-	stamp_blob(data, height / 4, width / 3, small_dim / 24)
-	stamp_blob(data, height / 4, 2 * width / 3, small_dim / 24)
+	if fill > 0.0:
+		_seed_random_fill(data)
+	else:
+		var small_dim := mini(width, height)
+		stamp_blob(data, height / 6, width / 2, small_dim / 16)
+		stamp_blob(data, height / 4, width / 3, small_dim / 24)
+		stamp_blob(data, height / 4, 2 * width / 3, small_dim / 24)
 	rd.texture_update(tex, 0, data.to_byte_array())
 
 	var sand := 0
@@ -186,6 +198,26 @@ func seed_scene(rd: RenderingDevice, tex: RID) -> int:
 		if data[p * 4] > 0.5:
 			sand += 1
 	return sand
+
+# Random Bernoulli fill at target density. Each cell is set to sand with
+# probability `fill` independently. Uses Godot's RandomNumberGenerator (PCG32,
+# period 2^64, high statistical quality), reproducible given the same seed.
+func _seed_random_fill(data: PackedFloat32Array) -> void:
+	var f: float = clamp(fill, 0.0, 1.0)
+	if f <= 0.0:
+		return
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = rng_seed
+
+	for r in range(height):
+		for c in range(width):
+			if rng.randf() < f:
+				var idx := (r * width + c) * 4
+				data[idx] = 1.0
+				data[idx + 1] = 1.0
+				data[idx + 2] = 1.0
+				data[idx + 3] = 1.0
 
 # Stamp a filled disk of sand
 
