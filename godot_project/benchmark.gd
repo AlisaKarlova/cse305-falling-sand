@@ -17,7 +17,7 @@ extends SceneTree
 const SHADER_PATH := "res://sand.glsl"
 
 # Margolus partition shifts, same order as texture_rect.gd.
-const PHASE_OFFSETS := [Vector2i(0, 0), Vector2i(1, 1), Vector2i(0, 1), Vector2i(1, 0)]
+const PHASE_OFFSETS := [Vector2i(0, 0), Vector2i(-1, -1), Vector2i(0, -1), Vector2i(-1, 0)]
 
 # Defaults mirror the C++ Args struct in main.cpp.
 var width: int = 200
