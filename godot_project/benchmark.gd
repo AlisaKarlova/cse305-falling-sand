@@ -27,6 +27,7 @@ var warmup: int = 5
 var rng_seed: int = 0xC5E305 # accepted for parity, the GPU rule is deterministic
 var chunk: int = 0 # 0 = one submit for the whole batch; >0 = submit/sync every `chunk` steps
 var fill: float = 0.0 #0 = blob scene; >0 = random Bernoulli fill at this density
+var mode: String = "bench"  # "bench" or "bias"
 
 func _initialize() -> void:
 	if not parse_args(OS.get_cmdline_user_args()):
@@ -50,11 +51,47 @@ func _initialize() -> void:
 		return
 
 	var grid_texture := create_texture(rd)
-	var initial_sand := seed_scene(rd, grid_texture) # count seeded grains on the CPU side
+	var initial_sand: int = (seed_bias_scene(rd, grid_texture) if mode == "bias" else seed_scene(rd, grid_texture))
 	var uniform_set := create_uniform_set(rd, shader, grid_texture)
 
 	var groups_x := (width / 2 + 15) / 16
 	var groups_y := (height / 2 + 15) / 16
+
+	if mode == "bias":
+		# Symmetry experiment: also verify initial seed is symmetric.
+		var lr0 := count_left_right(rd, grid_texture)
+		if lr0[0] != lr0[1]:
+			printerr("FATAL: initial seed asymmetric: L0=%d R0=%d" % [lr0[0], lr0[1]])
+			quit(2)
+			return
+
+		var phase := 0
+		for i in range(steps):
+			record_step(rd, pipeline, uniform_set, phase, groups_x, groups_y)
+			phase += 1
+		rd.submit()
+		rd.sync()
+
+		var lr := count_left_right(rd, grid_texture)
+		var final_sand: int = lr[0] + lr[1] + lr[2]
+		var rel_diff := 0.0
+		if final_sand > 0:
+			rel_diff = float(lr[0] - lr[1]) / float(final_sand)
+
+		print("BIAS impl=gpu width=%d height=%d steps=%d left=%d right=%d total=%d rel_diff=%.6f" % [
+			width, height, steps, lr[0], lr[1], final_sand, rel_diff
+		])
+
+		var exit_code := 0
+		if initial_sand != final_sand:
+			printerr("CONSERVATION VIOLATION: sand %d -> %d" % [initial_sand, final_sand])
+			exit_code = 2
+		rd.free_rid(uniform_set)
+		rd.free_rid(grid_texture)
+		rd.free_rid(pipeline)
+		rd.free_rid(shader)
+		quit(exit_code)
+		return
 
 	var phase := 0 # continuous phase counter spanning warmup + timed region
 
@@ -124,6 +161,14 @@ func parse_args(args: PackedStringArray) -> bool:
 			chunk = _need_int(args, i)
 		elif a == "--fill":
 			fill = _need_float(args, i)
+		elif a == "--mode":
+			if i + 1 >= args.size():
+				printerr("missing value for --mode")
+				return false
+			mode = args[i + 1]
+			if mode != "bench" and mode != "bias":
+				printerr("--mode must be bench or bias")
+				return false
 		else:
 			printerr("unknown argument: ", a)
 			return false
@@ -221,6 +266,20 @@ func _seed_random_fill(data: PackedFloat32Array) -> void:
 
 # Stamp a filled disk of sand
 
+# Single centered blob; mirrors seed_single_blob() in the C++ baseline.
+func seed_bias_scene(rd: RenderingDevice, tex: RID) -> int:
+	var data := PackedFloat32Array()
+	data.resize(width * height * 4)
+	var small_dim := mini(width, height)
+	stamp_blob(data, height / 4, width / 2, small_dim / 16)
+	rd.texture_update(tex, 0, data.to_byte_array())
+	var sand := 0
+	for p in range(width * height):
+		if data[p * 4] > 0.5:
+			sand += 1
+	return sand
+
+
 func stamp_blob(data: PackedFloat32Array, row: int, col: int, radius: int) -> void:
 	var r2 := radius * radius
 	for dr in range(-radius, radius + 1):
@@ -272,6 +331,19 @@ func count_sand(rd: RenderingDevice, tex: RID) -> int:
 			sand += 1
 	return sand
 
-
-
-
+# Returns [left, right, center_col]. Center col excluded from L and R.
+func count_left_right(rd: RenderingDevice, tex: RID) -> Array:
+	var bytes := rd.texture_get_data(tex, 0)
+	var floats := bytes.to_float32_array()
+	var L := 0
+	var R := 0
+	var C := 0
+	var cmid := width / 2
+	for y in range(height):
+		var row_off := y * width
+		for x in range(width):
+			if floats[(row_off + x) * 4] > 0.5:
+				if x < cmid: L += 1
+				elif x > cmid: R += 1
+				else: C += 1
+	return [L, R, C]

@@ -46,6 +46,7 @@ struct Args {
     std::uint64_t seed             = 0xC5E305ULL;
     int           warmup_steps     = 5;  
     double        fill             = 0.0;   // 0 = blob scene; >0 = random fill at this density
+    bool          bias             = false;
 
 };
 
@@ -99,6 +100,7 @@ void print_usage(const char* prog) {
         "  --seed   N        RNG seed (default 0xC5E305)\n"
         "  --delay  MS       per-frame sleep in interactive mode (default 16)\n"
         "  --fill   F        random Bernoulli fill at density F in [0,1]; overrides blob scene\n"
+        "  --bias            symmetry test: single centered blob, count L vs R\n"
         "  -h, --help        show this message\n",
         prog);
 }
@@ -125,6 +127,7 @@ bool parse_args(int argc, char** argv, Args& out) {
         else if (a == "--seed")   { auto v = need_value(i, "--seed");   if (!v) return false; out.seed   = std::strtoull(v, nullptr, 0); }
         else if (a == "--delay")  { auto v = need_value(i, "--delay");  if (!v) return false; out.delay_ms = std::atoi(v); }
         else if (a == "--fill")   { auto v = need_value(i, "--fill");   if (!v) return false; out.fill = std::atof(v); }
+        else if (a == "--bias")   { out.bias = true; }
         else {
             std::fprintf(stderr, "unknown argument: %s\n", a.c_str());
             print_usage(argv[0]);
@@ -169,6 +172,15 @@ void seed_initial(sand::Grid& g) {
         g.set(floor_row, c, sand::CellType::Wood);
     }
 }
+
+// Single sand blob centered on the vertical midline, dropped from row H/4.
+// Used by run_bias().
+void seed_single_blob(sand::Grid& g) {
+    const int small_dim = std::min(g.width(), g.height());
+    g.seed_blob(g.height() / 4, g.width() / 2, small_dim / 16,
+                sand::CellType::Sand);
+}
+
 
 // terminal renderer, done with Claude code to easier check the simulations visually
 void render_terminal(const sand::Grid& g) {
@@ -242,6 +254,61 @@ int run_benchmark(const Args& a) {
     return 0;
 }
 
+// Symmetry experiment. Seeds a single centered blob, runs N steps, counts
+// sand in the strict left half (cols 0..W/2-1) and strict right half
+// (cols W/2+1..W-1). Center column excluded from both halves so the
+// partition itself is invariant under reflection about col W/2.
+int run_bias(const Args& a) {
+    sand::Grid       g(a.width, a.height);
+    seed_single_blob(g);
+    sand::Simulation sim(a.seed);
+
+    auto count_halves = [&](std::size_t& L, std::size_t& R) {
+        L = 0; R = 0;
+        const int cmid = a.width / 2;
+        for (int r = 0; r < a.height; ++r) {
+            for (int c = 0; c < a.width; ++c) {
+                if (g.cell(r, c) != sand::CellType::Sand) continue;
+                if      (c < cmid) ++L;
+                else if (c > cmid) ++R;
+            }
+        }
+    };
+
+    const std::size_t initial_sand = g.count(sand::CellType::Sand);
+
+    // Sanity: the seed itself must be perfectly symmetric.
+    std::size_t L0 = 0, R0 = 0;
+    count_halves(L0, R0);
+    if (L0 != R0) {
+        std::fprintf(stderr, "FATAL: initial seed asymmetric: L0=%zu R0=%zu\n",
+                     L0, R0);
+        return 2;
+    }
+
+    for (int i = 0; i < a.steps; ++i) sim.step(g);
+
+    const std::size_t final_sand = g.count(sand::CellType::Sand);
+    if (initial_sand != final_sand) {
+        std::fprintf(stderr, "CONSERVATION VIOLATION: sand %zu -> %zu\n",
+                     initial_sand, final_sand);
+        return 2;
+    }
+
+    std::size_t L = 0, R = 0;
+    count_halves(L, R);
+    const double rel_diff = final_sand > 0
+        ? static_cast<double>(static_cast<long long>(L) - static_cast<long long>(R))
+          / static_cast<double>(final_sand)
+        : 0.0;
+
+    std::printf("BIAS impl=seq width=%d height=%d steps=%d "
+                "left=%zu right=%zu total=%zu rel_diff=%.6f\n",
+                a.width, a.height, a.steps, L, R, final_sand, rel_diff);
+    return 0;
+}
+
+
 int run_interactive(const Args& a) {
     sand::Grid       g(a.width, a.height);
     seed_initial(g);
@@ -291,6 +358,6 @@ int main(int argc, char** argv) {
         return 1;
 #endif
     }
-
+    if (a.bias) return run_bias(a);
     return a.benchmark ? run_benchmark(a) : run_interactive(a);
 }

@@ -8,8 +8,8 @@ var pipeline: RID
 var grid_texture: RID
 var uniform_set: RID
 
-const WIDTH: int = 128
-const HEIGHT: int = 128
+const WIDTH: int = 16
+const HEIGHT: int = 16
 const SHADER_PATH: String = "res://sand.glsl"
 
 var simulation_running: bool = false
@@ -60,9 +60,9 @@ func initialize_sand_blob(tex: RID) -> void:
 	data.resize(WIDTH * HEIGHT * 4)
 	for i in range(data.size()):
 		data[i] = 0.0
-	var cx = 7 * WIDTH / 8
-	var cy = HEIGHT / 6 # upper area so it has room to fall
-	var r = 50
+	var cx = WIDTH / 2
+	var cy = HEIGHT / 4 # upper area so it has room to fall
+	var r = 4
 	for y in range(HEIGHT):
 		for x in range(WIDTH):
 			var dx = x - cx
