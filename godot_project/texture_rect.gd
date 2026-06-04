@@ -27,7 +27,7 @@ func _ready():
 		return
 
 	grid_texture = create_texture()
-	initialize_sand_blob(grid_texture)
+	initialize_grid(grid_texture)
 
 	if not create_compute_pipeline():
 		printerr("Failed to create pipeline!")
@@ -55,26 +55,28 @@ func create_texture() -> RID:
 		RenderingDevice.TEXTURE_USAGE_CAN_COPY_FROM_BIT
 	return rd.texture_create(fmt, RDTextureView.new())
 
-func initialize_sand_blob(tex: RID) -> void:
+func initialize_grid(tex: RID) -> void:
 	var data = PackedFloat32Array()
 	data.resize(WIDTH * HEIGHT * 4)
 	for i in range(data.size()):
 		data[i] = 0.0
-	var cx = WIDTH / 2
-	var cy = HEIGHT / 4 # upper area so it has room to fall
-	var r = 4
+
+	var cx_s = WIDTH / 3
+	var cy_s = HEIGHT / 4
 	for y in range(HEIGHT):
 		for x in range(WIDTH):
-			var dx = x - cx
-			var dy = y - cy
-			if dx * dx + dy * dy <= r * r:  # inside circle of radius r
+			if (x-cx_s)*(x-cx_s) + (y-cy_s)*(y-cy_s) <= 16:
 				var idx = (y * WIDTH + x) * 4
 				data[idx] = 1.0
-				data[idx + 1] = 1.0
-				data[idx + 2] = 1.0
-				data[idx + 3] = 1.0
+				
+	var cx_w = (WIDTH * 2) / 3
+	var cy_w = HEIGHT / 4
+	for y in range(HEIGHT):
+		for x in range(WIDTH):
+			if (x-cx_w)*(x-cx_w) + (y-cy_w)*(y-cy_w) <= 16:
+				var idx = (y * WIDTH + x) * 4
+				data[idx] = 2.0
 	rd.texture_update(tex, 0, data.to_byte_array())
-	print("Sand blob initialized")
 
 func create_compute_pipeline() -> bool:
 	if not FileAccess.file_exists(SHADER_PATH):
