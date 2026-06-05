@@ -215,6 +215,18 @@ void render_terminal(const sand::Grid& g) {
     std::fflush(stdout);
 }
 
+// Untimed warmup, then a single wall-clock span around N steps. Templated so
+// both Simulation and MargolusSimulation share one timing path.
+template <typename Sim>
+double time_steps(Sim& sim, sand::Grid& g, int warmup, int steps) {
+    for (int i = 0; i < warmup; ++i) sim.step(g);
+    using clk = std::chrono::high_resolution_clock;
+    const auto t0 = clk::now();
+    for (int i = 0; i < steps; ++i) sim.step(g);
+    const auto t1 = clk::now();
+    return std::chrono::duration<double>(t1 - t0).count();
+}
+
 int run_benchmark(const Args& a) {
     sand::Grid       g(a.width, a.height);
     if (a.fill > 0.0) {
@@ -222,20 +234,20 @@ int run_benchmark(const Args& a) {
     } else {
         seed_benchmark(g);
     }
-    sand::Simulation sim(a.seed);   
+
 
     const std::size_t initial_sand = g.count(sand::CellType::Sand);
     const std::size_t initial_wood = g.count(sand::CellType::Wood);
 
-    // Warmup
-    for (int i = 0; i < a.warmup_steps; ++i) sim.step(g);
+    double elapsed_s;
+    if (a.impl == "margolus") {
+        sand::MargolusSimulation sim(a.seed, a.threads);
+        elapsed_s = time_steps(sim, g, a.warmup_steps, a.steps);
+    } else {
+        sand::Simulation sim(a.seed);
+        elapsed_s = time_steps(sim, g, a.warmup_steps, a.steps);
+    }
 
-    using clk = std::chrono::high_resolution_clock;
-    const auto t0 = clk::now();
-    for (int i = 0; i < a.steps; ++i) sim.step(g);
-    const auto t1 = clk::now();
-
-    const double elapsed_s = std::chrono::duration<double>(t1 - t0).count();
     const double cell_updates =
         static_cast<double>(a.width) *
         static_cast<double>(a.height) *
@@ -247,10 +259,11 @@ int run_benchmark(const Args& a) {
     const std::size_t final_wood = g.count(sand::CellType::Wood);
 
     // One line, key=value pairs. Easy to grep/awk in benchmarks/.
-    std::printf("BENCH width=%d height=%d steps=%d warmup=%d "
+    std::printf("BENCH impl=%s threads=%d width=%d height=%d steps=%d warmup=%d "
                 "elapsed_s=%.6f cell_updates_per_s=%.3e "
                 "sand_initial=%zu sand_final=%zu "
                 "wood_initial=%zu wood_final=%zu\n",
+                a.impl.c_str(), a.threads,
                 a.width, a.height, a.steps, a.warmup_steps,
                 elapsed_s, cell_updates_per_s,
                 initial_sand, final_sand,
