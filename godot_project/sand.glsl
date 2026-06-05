@@ -21,16 +21,6 @@ const int three_cell_BL_conv[8] = int[8](0,1,2,3, 2,3,6,7);
 const int three_cell_TR_conv[8] = int[8](0,1,1,3, 4,5,5,7);
 const int three_cell_TL_conv[8] = int[8](0,1,2,3, 1,5,3,7);
 
-int moveable_cell(ivec2 c) {
-	if  ((c.x == -1) || (c.x == params.width  - 1)
-	   || (c.y == -1) || (c.y == params.height - 1)) {
-	// || (imageLoad(grid, c).r == 2)  // wood
-		return 0;
-	}
-
-	return 1;
-}
-
 int read_cell(ivec2 c) {
 	return int(imageLoad(grid, c).r);
 }
@@ -47,9 +37,29 @@ void write_cell(ivec2 c, float v) {
 	imageStore(grid, c, color);
 }
 
+int moveable_cell(ivec2 c) {
+	if ((c.x == -1) || (c.x == params.width  - 1)
+	 || (c.y == -1) || (c.y == params.height - 1)
+	 || (read_cell(c) == 3)) { // wood
+		return 0;
+	}
+
+	return 1;
+}
+
 void one_cell(ivec2 c) {
 	write_cell(c, read_cell(c));
 	return;
+}
+
+void two_cell_diag_up(ivec2 cTR, ivec2 cBL) {
+	one_cell(cTR);
+	one_cell(cBL);
+}
+
+void two_cell_diag_dn(ivec2 cTL, ivec2 cBR) {
+	one_cell(cTL);
+	one_cell(cBR);
 }
 
 void two_cell_hor(ivec2 cL, ivec2 cR){
@@ -321,10 +331,13 @@ void main() {
 		case 11: three_cell_BL(cTL, cBL, cBR); return;
 		case 13: three_cell_TR(cTL, cTR, cBR); return;
 		case 14: three_cell_TL(cTL, cTR, cBL); return;
+		
+		case 6:  two_cell_diag_up(cTR, cBL); return;
+		case 9:  two_cell_diag_dn(cTL, cBR); return;
 
 		case 5:  two_cell_vert(cTR, cBR); return;
 		case 10: two_cell_vert(cTL, cBL); return;
-
+		
 		case 3:  two_cell_hor(cBL, cBR); return;
 		case 12: two_cell_hor(cTL, cTR); return;
 

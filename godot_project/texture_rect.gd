@@ -8,8 +8,10 @@ var pipeline: RID
 var grid_texture: RID
 var uniform_set: RID
 
-const WIDTH: int = 16
-const HEIGHT: int = 16
+var brush_radius: int = 5
+var brush_type: int = 1  # 1 = sand, 2 = water, 3 = wood, 0 = empty
+const WIDTH: int = 126
+const HEIGHT: int = 126
 const SHADER_PATH: String = "res://sand.glsl"
 
 var simulation_running: bool = false
@@ -61,21 +63,28 @@ func initialize_grid(tex: RID) -> void:
 	for i in range(data.size()):
 		data[i] = 0.0
 
-	var cx_s = WIDTH / 3
+	var cx_s = WIDTH / 2
 	var cy_s = HEIGHT / 4
 	for y in range(HEIGHT):
 		for x in range(WIDTH):
-			if (x-cx_s)*(x-cx_s) + (y-cy_s)*(y-cy_s) <= 16:
+			if (x-cx_s)*(x-cx_s) + (y-cy_s)*(y-cy_s) <= 25:
 				var idx = (y * WIDTH + x) * 4
-				data[idx] = 1.0
+				data[idx]     = 1.0
+				data[idx + 1] = 1.0
+				data[idx + 2] = 1.0
+				data[idx + 3] = 1.0
 				
-	var cx_w = (WIDTH * 2) / 3
-	var cy_w = HEIGHT / 4
+	var cx_wood = WIDTH / 2
+	var cy_wood = HEIGHT / 2
 	for y in range(HEIGHT):
 		for x in range(WIDTH):
-			if (x-cx_w)*(x-cx_w) + (y-cy_w)*(y-cy_w) <= 16:
+			if (x-cx_wood)*(x-cx_wood) + (y-cy_wood)*(y-cy_wood) <= 16:
 				var idx = (y * WIDTH + x) * 4
-				data[idx] = 2.0
+				data[idx]     = 3.0
+				data[idx + 1] = 0.6
+				data[idx + 2] = 0.4
+				data[idx + 3] = 1.0
+				
 	rd.texture_update(tex, 0, data.to_byte_array())
 
 func create_compute_pipeline() -> bool:
@@ -129,17 +138,64 @@ func step_once() -> void:
 	rd.compute_list_end()
 
 	frame_index = (frame_index + 1) % phase_offsets.size()
+	
+func mouse_click():
+	var local_pos = get_local_mouse_position()
+	get_rect()
+	var tex_pos = Vector2i(int(local_pos.x * WIDTH / get_rect().size.x), int(local_pos.y * HEIGHT / get_rect().size.y))
+	if tex_pos.x >= 0 and tex_pos.x < WIDTH and tex_pos.y >= 0 and tex_pos.y < HEIGHT:
+		fill_radius(tex_pos)
 
 func _input(event):
 	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_SPACE:
+		if event.keycode == KEY_1: brush_type = 1
+		elif event.keycode == KEY_2: brush_type = 2
+		elif event.keycode == KEY_3: brush_type = 3
+		elif event.keycode == KEY_0: brush_type = 0
+		elif event.keycode == KEY_5: brush_radius = 3
+		elif event.keycode == KEY_6: brush_radius = 10
+		elif event.keycode == KEY_7: brush_radius = 50
+		elif event.keycode == KEY_SPACE:
 			simulation_running = not simulation_running
 			print("Simulation: ", "RUNNING" if simulation_running else "PAUSED")
 		elif event.keycode == KEY_RIGHT:
 			step_once()
 			print("Stepped once. frame_index now ", frame_index)
 
+func fill_radius(center: Vector2i):
+	var data = rd.texture_get_data(grid_texture, 0).to_float32_array()
+	for y in range(HEIGHT):
+		for x in range(WIDTH):
+			var dx = x - center.x
+			var dy = y - center.y
+			if dx * dx + dy * dy <= brush_radius * brush_radius:
+				var idx = (y * WIDTH + x) * 4
+				if brush_type == 0:
+					data[idx]     = 0.0
+					data[idx + 1] = 0.0
+					data[idx + 2] = 0.0
+					data[idx + 3] = 1.0
+				elif brush_type == 1:
+					data[idx]     = 1.0
+					data[idx + 1] = 1.0
+					data[idx + 2] = 1.0
+					data[idx + 3] = 1.0
+				elif brush_type == 2:
+					data[idx]     = 2.0
+					data[idx + 1] = 0.1
+					data[idx + 2] = 0.9
+					data[idx + 3] = 1.0
+				elif brush_type == 3:
+					data[idx]     = 3.0
+					data[idx + 1] = 0.6
+					data[idx + 2] = 0.2
+					data[idx + 3] = 1.0
+					
+	rd.texture_update(grid_texture, 0, data.to_byte_array())
+			
 func _process(_delta):
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		mouse_click()
 	if not rd or not pipeline.is_valid(): return
 	if not simulation_running: return
 	frame_counter += 1
