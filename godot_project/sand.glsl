@@ -267,11 +267,6 @@ void four_cell(ivec2 cTL, ivec2 cTR, ivec2 cBL, ivec2 cBR) {
 		TR = 2;
 	}
 	bool coin = ((cTL.x * 3 + cTL.y * 7 + params.offset_x * 11) % 2) == 0;
-	
-	// SUPPRIMÉ : Le mouvement horizontal pour BL et BR.
-	// On laisse la grille alternée (offset) s'en charger au tour suivant.
-
-	// AJOUTÉ : On s'assure que TL ou TR est soutenu (BL != 0 ou BR != 0) avant de s'étaler.
 	if (TL == 2 && TR == 0 && BL != 0) {
 		if (coin) {
 			TR = 2;
