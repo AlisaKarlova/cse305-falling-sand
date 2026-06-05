@@ -8,8 +8,8 @@ var pipeline: RID
 var grid_texture: RID
 var uniform_set: RID
 
-const WIDTH: int = 16
-const HEIGHT: int = 16
+const WIDTH: int = 200
+const HEIGHT: int = 20
 const SHADER_PATH: String = "res://sand.glsl"
 
 var simulation_running: bool = false
