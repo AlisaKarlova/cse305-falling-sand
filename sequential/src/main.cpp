@@ -22,7 +22,7 @@
 
 #include "grid.h"
 #include "simulation.h"
-
+#include "margolus.h"
 #include <iostream>
 #include <algorithm>
 #include <chrono>
@@ -47,6 +47,8 @@ struct Args {
     int           warmup_steps     = 5;  
     double        fill             = 0.0;   // 0 = blob scene; >0 = random fill at this density
     bool          bias             = false;
+    int           threads          = 1;       // CPU threads for the Margolus impl
+    std::string   impl             = "scan";  // "scan" (row-scan) or "margolus"
 
 };
 
@@ -128,6 +130,8 @@ bool parse_args(int argc, char** argv, Args& out) {
         else if (a == "--delay")  { auto v = need_value(i, "--delay");  if (!v) return false; out.delay_ms = std::atoi(v); }
         else if (a == "--fill")   { auto v = need_value(i, "--fill");   if (!v) return false; out.fill = std::atof(v); }
         else if (a == "--bias")   { out.bias = true; }
+        else if (a == "--threads"){ auto v = need_value(i, "--threads"); if (!v) return false; out.threads = std::atoi(v); }
+        else if (a == "--impl")   { auto v = need_value(i, "--impl");    if (!v) return false; out.impl = v; }
         else {
             std::fprintf(stderr, "unknown argument: %s\n", a.c_str());
             print_usage(argv[0]);
@@ -141,6 +145,14 @@ bool parse_args(int argc, char** argv, Args& out) {
     }
     if (out.steps < 0) {
         std::fprintf(stderr, "error: --steps must be >= 0\n");
+        return false;
+    }
+    if (out.threads < 1) {
+        std::fprintf(stderr, "error: --threads must be >= 1\n");
+        return false;
+    }
+    if (out.impl != "scan" && out.impl != "margolus") {
+        std::fprintf(stderr, "error: --impl must be 'scan' or 'margolus'\n");
         return false;
     }
     return true;
