@@ -18,6 +18,7 @@ set(SAND_SIM_SOURCES
     src/main.cpp
     src/grid.cpp
     src/simulation.cpp
+    src/margolus.cpp
 )
 
 if(ENABLE_VIEWER)
@@ -26,6 +27,8 @@ endif()
 
 add_executable(sand_sim ${SAND_SIM_SOURCES})
 target_include_directories(sand_sim PRIVATE include)
+find_package(Threads REQUIRED)
+target_link_libraries(sand_sim PRIVATE Threads::Threads)
 
 if(ENABLE_VIEWER)
     find_package(SDL2 REQUIRED)
