@@ -63,16 +63,11 @@ cmake --build sequential/build -j
 
 The binary is `sequential/build/sand_sim`.
 
-> **Always build Release for any timing.** Debug builds disable optimisation and
-> the CUPS numbers are meaningless. The CMake default is already `Release`, and
-> warnings are `-Wall -Wextra -Wpedantic`. C++17, pthreads linked for the
-> multithreaded Margolus path.
-
 ### Optional SDL2 viewer (experimental)
 
 `CMakeLists.txt` exposes `-DENABLE_VIEWER=ON`, which compiles `src/viewer.cpp`
 and links SDL2 for a real graphical window (the `--viewer` flag). This is an
-optional code path; if `src/viewer.cpp` is not present or SDL2 is not installed,
+optional code path; if `src/viewer.cpp` is not present or SDL2 is not installed (like on Salle info machines),
 leave the option `OFF` (the default) and use the built-in terminal animation
 instead.
 
