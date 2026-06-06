@@ -65,15 +65,13 @@ void two_cell_diag_dn(ivec2 cTL, ivec2 cBR) {
 void two_cell_hor(ivec2 cL, ivec2 cR){
 	int L = read_cell(cL);
 	int R = read_cell(cR);
-	if ((L == 2 && R == 0)||(L == 0 && R == 2)){
-		bool coin_flip = ((cL.x * 3 + cL.y * 7 + params.offset_x * 11) % 2) == 0;
-		if(coin_flip) {
-			write_cell(cL, float(R));
-			write_cell(cR, float(L));
-		}else{
-			write_cell(cL, float(L));
-			write_cell(cR, float(R));
-		}
+	if (L == 2 && R == 0){ 
+		write_cell(cL, 0.0);
+		write_cell(cR, 2.0);
+	}
+	else if (L == 0 && R == 2) {
+		write_cell(cL, 2.0);
+		write_cell(cR, 0.0);
 	}
 	else {
 		write_cell(cL, float(L));
@@ -118,18 +116,13 @@ void three_cell_BR(ivec2 cTR, ivec2 cBL, ivec2 cBR) {
 		BL = TR; 
 		TR = tmp;
 	}
-	bool coin = ((cTR.x * 3 + cTR.y * 7 + params.offset_x * 11) % 2) == 0;
-	if (BL == 2 && BR == 0) { 
-		if (coin) { 
-			BR = 2; 
-			BL = 0;
-		}
+	if (BL == 2 && BR == 0){ 
+		BR = 2;
+		BL = 0;
 	}
 	else if (BL == 0 && BR == 2) {
-		if (coin) { 
-			BL = 2; 
-			BR = 0;
-		}
+		BL = 2;
+		BR = 0;
 	}
 	write_cell(cTR, float(TR));
 	write_cell(cBL, float(BL));
@@ -147,18 +140,13 @@ void three_cell_BL(ivec2 cTL, ivec2 cBL, ivec2 cBR) {
 			TL = tmp;
 		}
 	}
-	bool coin = ((cBL.x * 3 + cBL.y * 7 + params.offset_x * 11) % 2) == 0;
-	if (BL == 2 && BR == 0) { 
-		if (coin) { 
-			BR = 2; 
-			BL = 0; 
-		}
+	if (BL == 2 && BR == 0){ 
+		BR = 2;
+		BL = 0;
 	}
-	else if (BL == 0 && BR == 2) { 
-		if (coin) { 
-			BL = 2;
-			BR = 0;
-		} 
+	else if (BL == 0 && BR == 2){ 
+		BL = 2;
+		BR = 0;
 	}
 	write_cell(cTL, float(TL));
 	write_cell(cBL, float(BL));
@@ -183,18 +171,9 @@ void three_cell_TR(ivec2 cTL, ivec2 cTR, ivec2 cBR){
 		BR = TL;
 		TL = 0;
 	}
-	bool coin = ((cTL.x * 3 + cTL.y * 7 + params.offset_x * 11) % 2) == 0;
 	if (TL == 2 && TR == 0) {
-		if (coin) {
-			TR = 2;
-			TL = 0;
-		}
-	}
-	else if (TL == 0 && TR == 2) {
-		if (coin) {
-			TL = 2;
-			TR = 0;
-		}
+		TR = 2;
+		TL = 0;
 	}
 	write_cell(cTL, float(TL));
 	write_cell(cTR, float(TR));
@@ -219,18 +198,9 @@ void three_cell_TL(ivec2 cTL, ivec2 cTR, ivec2 cBL){
 		BL = TR;
 		TR = 0;
 	}
-	bool coin = ((cTL.x * 3 + cTL.y * 7 + params.offset_x * 11) % 2) == 0;
-	if (TL == 2 && TR == 0){
-		if (coin) {
-			TR = 2;
-			TL = 0;
-		}
-	}
-	else if (TL == 0 && TR == 2) {
-		if (coin) {
-			TL = 2;
-			TR = 0;
-		}
+	if (TR == 2 && TL == 0) {
+		TL = 2;
+		TR = 0;
 	}
 	write_cell(cTL, float(TL));
 	write_cell(cTR, float(TR));
@@ -276,18 +246,16 @@ void four_cell(ivec2 cTL, ivec2 cTR, ivec2 cBL, ivec2 cBR) {
 		BL = 1;
 		TR = 2;
 	}
-	bool coin = ((cTL.x * 3 + cTL.y * 7 + params.offset_x * 11) % 2) == 0;
-	if (TL == 2 && TR == 0 && BL != 0) {
-		if (coin) {
-			TR = 2;
-			TL = 0;
-		}
+	if (TL == 2 && BL != 0 && TR == 0 && BR == 0) {
+		TL = 0; BR = 2;
 	}
+	else if (TR == 2 && BR != 0 && TL == 0 && BL == 0) {
+		TR = 0; BL = 2;
+	}
+	if (TL == 2 && TR == 0 && BL != 0)      { TR = 2; TL = 0; }
 	else if (TL == 0 && TR == 2 && BR != 0) {
-		if (coin) {
-			TL = 2;
-			TR = 0;
-		}
+		TL = 2;
+		TR = 0;
 	}
 
 	write_cell(cTL, float(TL));
