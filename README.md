@@ -175,7 +175,7 @@ Run `./sequential/build/sand_sim --help` for the same list.
 
 ---
 
-# 2. GPU implementation (Godot 4.6)
+# 2. GPU implementation (Godot 4.6) (not runnable on salle info machines, since Godot is not installed)
 
 The GPU version runs the **Margolus** rule as a compute shader
 (`godot_project/sand.glsl`): one shader invocation per 2×2 block, workgroup size
