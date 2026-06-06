@@ -92,6 +92,26 @@ func _initialize() -> void:
 		rd.free_rid(shader)
 		quit(exit_code)
 		return
+	if mode == "conservation":
+		var phase := 0
+		var violation := false
+		for i in range(steps):
+			record_step(rd, pipeline, uniform_set, phase, groups_x, groups_y)
+			rd.submit()
+			rd.sync()
+			phase += 1
+			var current_sand := count_sand(rd, grid_texture)
+			var ok := (current_sand == initial_sand)
+			if not ok:
+				violation = true
+			print("CONSERVATION step=%d sand=%d expected=%d ok=%s" % [i, current_sand, initial_sand, "true" if ok else "FALSE"])
+		print("CONSERVATION_SUMMARY impl=gpu width=%d height=%d steps=%d sand_initial=%d violation=%s" % [width, height, steps, initial_sand, "true" if violation else "false"])
+		rd.free_rid(uniform_set)
+		rd.free_rid(grid_texture)
+		rd.free_rid(pipeline)
+		rd.free_rid(shader)
+		quit(2 if violation else 0)
+		return
 
 	var phase := 0 # continuous phase counter spanning warmup + timed region
 
@@ -166,8 +186,8 @@ func parse_args(args: PackedStringArray) -> bool:
 				printerr("missing value for --mode")
 				return false
 			mode = args[i + 1]
-			if mode != "bench" and mode != "bias":
-				printerr("--mode must be bench or bias")
+			if mode != "bench" and mode != "bias" and mode != "conservation":
+				printerr("--mode must be bench, bias or conservation")
 				return false
 		else:
 			printerr("unknown argument: ", a)
@@ -235,6 +255,7 @@ func seed_scene(rd: RenderingDevice, tex: RID) -> int:
 		stamp_blob(data, height / 6, width / 2, small_dim / 16)
 		stamp_blob(data, height / 4, width / 3, small_dim / 24)
 		stamp_blob(data, height / 4, 2 * width / 3, small_dim / 24)
+		stamp_blob_water(data, 2 * height / 3, width / 2, small_dim / 20)
 	rd.texture_update(tex, 0, data.to_byte_array())
 
 	var sand := 0
@@ -293,6 +314,21 @@ func stamp_blob(data: PackedFloat32Array, row: int, col: int, radius: int) -> vo
 				data[idx] = 1.0
 				data[idx + 1] = 1.0
 				data[idx + 2] = 1.0
+				data[idx + 3] = 1.0
+
+func stamp_blob_water(data: PackedFloat32Array, row: int, col: int, radius: int) -> void:
+	var r2 := radius * radius
+	for dr in range(-radius, radius + 1):
+		for dc in range(-radius, radius + 1):
+			if dr * dr + dc * dc <= r2:
+				var x := col + dc
+				var y := row + dr
+				if x < 0 or x >= width or y < 0 or y >= height:
+					continue
+				var idx := (y * width + x) * 4
+				data[idx] = 2.0
+				data[idx + 1] = 0.1
+				data[idx + 2] = 0.9
 				data[idx + 3] = 1.0
 
 
