@@ -41,10 +41,11 @@ struct Args {
     int           steps            = 1000;
     bool          benchmark        = false;
     bool          viewer           = false;
+    bool          conservation     = false;
     int           render_interval  = 1;   // frames between renders
     int           delay_ms         = 16;  // ~60 fps in interactive mode
     std::uint64_t seed             = 0xC5E305ULL;
-    int           warmup_steps     = 5;  
+    int           warmup_steps     = 5;
     double        fill             = 0.0;   // 0 = blob scene; >0 = random fill at this density
     bool          bias             = false;
     int           threads          = 1;       // CPU threads for the Margolus impl
@@ -129,7 +130,8 @@ bool parse_args(int argc, char** argv, Args& out) {
         else if (a == "--seed")   { auto v = need_value(i, "--seed");   if (!v) return false; out.seed   = std::strtoull(v, nullptr, 0); }
         else if (a == "--delay")  { auto v = need_value(i, "--delay");  if (!v) return false; out.delay_ms = std::atoi(v); }
         else if (a == "--fill")   { auto v = need_value(i, "--fill");   if (!v) return false; out.fill = std::atof(v); }
-        else if (a == "--bias")   { out.bias = true; }
+        else if (a == "--bias")         { out.bias         = true; }
+        else if (a == "--conservation") { out.conservation = true; }
         else if (a == "--threads"){ auto v = need_value(i, "--threads"); if (!v) return false; out.threads = std::atoi(v); }
         else if (a == "--impl")   { auto v = need_value(i, "--impl");    if (!v) return false; out.impl = v; }
         else {
@@ -334,6 +336,30 @@ int run_bias(const Args& a) {
 }
 
 
+int run_conservation(const Args& a) {
+    sand::Grid       g(a.width, a.height);
+    seed_initial(g);
+    sand::Simulation sim(a.seed);
+
+    const std::size_t initial_sand = g.count(sand::CellType::Sand);
+    const std::size_t initial_wood = g.count(sand::CellType::Wood);
+
+    bool violated = false;
+    for (int i = 0; i < a.steps; ++i) {
+        sim.step(g);
+        if (g.count(sand::CellType::Sand) != initial_sand ||
+            g.count(sand::CellType::Wood) != initial_wood) {
+            violated = true;
+            break;
+        }
+    }
+
+    const std::size_t final_sand = g.count(sand::CellType::Sand);
+    std::printf("CONSERVATION_SUMMARY sand_initial=%zu sand_final=%zu violated=%s\n",
+                initial_sand, final_sand, violated ? "true" : "false");
+    return violated ? 2 : 0;
+}
+
 int run_interactive(const Args& a) {
     sand::Grid       g(a.width, a.height);
     seed_initial(g);
@@ -383,6 +409,7 @@ int main(int argc, char** argv) {
         return 1;
 #endif
     }
-    if (a.bias) return run_bias(a);
+    if (a.bias)         return run_bias(a);
+    if (a.conservation) return run_conservation(a);
     return a.benchmark ? run_benchmark(a) : run_interactive(a);
 }

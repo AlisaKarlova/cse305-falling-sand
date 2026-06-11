@@ -38,8 +38,8 @@ void write_cell(ivec2 c, float v) {
 }
 
 int moveable_cell(ivec2 c) {
-	if ((c.x == -1) || (c.x == params.width  - 1)
-	 || (c.y == -1) || (c.y == params.height - 1)
+	if ((c.x == -1) || (c.x == params.width)
+	 || (c.y == -1) || (c.y == params.height)
 	 || (read_cell(c) == 3)) { // wood
 		return 0;
 	}
